@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyShift - SPHEREx time-lapse</title>
+<meta name="description" content="Type a sky position and watch real NASA SPHEREx infrared images of it change over more than a year.">
+<meta name="theme-color" content="#041B41">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23041B41'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23E6FF10' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23FFFFFF'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">SkyShift <span>SPHEREx time-lapse explorer</span></div>
+    <div class="topr">
+      <a href="#about" data-i18n="nav_how">How to read it</a>
+      <div class="seg lang" role="group" aria-label="Language" data-i18n-aria="aria_lang">
+        <button type="button" data-lang="en" aria-pressed="true" lang="en" title="English">EN</button>
+        <button type="button" data-lang="vi" aria-pressed="false" lang="vi" title="Tiếng Việt">VI</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1 data-i18n="hero_h">Watch the infrared sky move.</h1>
+    <p data-i18n="hero_p">Type any sky position, or pick a famous target. SkyShift shows real NASA SPHEREx images of that spot, one frame per observing epoch, as a short time-lapse.</p>
+  </section>
+
+  <section class="card" id="querycard" aria-label="Sky position" data-i18n-aria="aria_pos">
+    <form id="form" class="query" autocomplete="off">
+      <div><label for="ra" data-i18n="l_ra">RA (degrees)</label><input id="ra" inputmode="decimal" placeholder="269.4520"></div>
+      <div><label for="dec" data-i18n="l_dec">Dec (degrees)</label><input id="dec" inputmode="decimal" placeholder="4.6934"></div>
+      <div><label for="fov" data-i18n="l_fov">Field of view</label>
+        <select id="fov"><option value="0.05">0.05&deg; (3&prime;)</option><option value="0.1" selected>0.1&deg; (6&prime;)</option><option value="0.2">0.2&deg; (12&prime;)</option></select></div>
+      <div><label for="band" data-i18n="l_band">Band</label>
+        <select id="band"><option value="SWIR">SWIR 0.75&ndash;2.4 &micro;m</option><option value="MWIR">MWIR 2.4&ndash;5 &micro;m</option><option value="AUTO" data-i18n="band_auto">Auto</option></select></div>
+      <div><button class="go" id="go" type="submit" data-i18n="go">Go &#9654;</button></div>
+    </form>
+    <details class="adv">
+      <summary data-i18n="adv">Advanced: moving targets and detector</summary>
+      <div class="grid">
+        <div><label for="pmra" data-i18n="l_pmra">Proper motion RA (mas/yr)</label><input id="pmra" inputmode="decimal" placeholder="e.g. -801.5" data-i18n-ph="ph_eg"></div>
+        <div><label for="pmdec" data-i18n="l_pmdec">Proper motion Dec (mas/yr)</label><input id="pmdec" inputmode="decimal" placeholder="e.g. 10362.4" data-i18n-ph="ph_eg"></div>
+        <div><label for="pos_epoch" data-i18n="l_pos_epoch">Position epoch (year)</label><input id="pos_epoch" inputmode="decimal" value="2000"></div>
+        <div><label for="detector" data-i18n="l_detector">Detector (1&ndash;6)</label><input id="detector" inputmode="numeric" placeholder="auto" data-i18n-ph="ph_auto"></div>
+      </div>
+      <p class="note" data-i18n="adv_note">With proper motion, the field follows the star to the date of the SPHEREx data and a yellow ring shows where it should be on each date.</p>
+    </details>
+    <div class="presets" id="presets"><span class="lbl" data-i18n="try_">Try:</span></div>
+  </section>
+
+  <section class="card viewer" aria-label="Time-lapse">
+    <div>
+      <div class="frame" id="stage">
+        <img id="frame" alt="SPHEREx image of the selected sky position for the selected epoch" hidden>
+        <canvas id="overlay" aria-hidden="true"></canvas>
+        <div id="marker" title="Predicted position"></div>
+        <div class="tip" id="tip" hidden></div>
+        <div class="compass" id="compass" hidden data-i18n="compass">N &uarr; &nbsp; E &larr;</div>
+        <div class="datebadge" id="datebadge" hidden></div>
+        <div class="placeholder" id="placeholder" data-i18n="placeholder">Pick a target above, or type RA and Dec and press Go.</div>
+        <div class="overlay" id="loading" role="status" aria-live="polite"><div class="spinner"></div><div id="loadmsg" data-i18n="loading">Working&hellip;</div></div>
+      </div>
+      <div class="controls" id="controls" hidden>
+        <button class="btn" id="play" type="button" aria-label="Play or pause">&#10074;&#10074; Pause</button>
+        <div class="seg" role="group" aria-label="View">
+          <button type="button" id="vflip" aria-pressed="true" data-i18n="v_flip">Flipbook</button>
+          <button type="button" id="vdiff" aria-pressed="false" data-i18n="v_diff">Difference</button>
+        </div>
+        <label class="grow" for="speed"><span data-i18n="speed">Speed</span> <input id="speed" type="range" min="1" max="6" value="3"></label>
+      </div>
+      <div class="chips" id="chips" hidden></div>
+      <div class="ovctl" id="ovctl" hidden>
+        <label class="ck"><input type="checkbox" id="ov_track" checked><span class="sw t"></span><span data-i18n="ov_track">Measured path of the target</span></label>
+        <label class="ck"><input type="checkbox" id="ov_gaia" checked><span class="sw g"></span><span data-i18n="ov_gaia">Gaia DR3 stars</span></label>
+        <label class="ck"><input type="checkbox" id="ov_wise" checked><span class="sw w"></span><span data-i18n="ov_wise">AllWISE sources (2010)</span></label>
+        <label class="ck"><input type="checkbox" id="ov_simbad" checked><span class="sw s"></span><span data-i18n="ov_simbad">SIMBAD objects</span></label>
+      </div>
+      <p class="note ovnote" id="ovnote" hidden data-i18n="ov_note">Light-blue rings: stars from the Gaia DR3 catalogue, moved with their proper motion to the date of the frame (bigger = brighter). Pink diamonds: AllWISE infrared sources where WISE saw them in 2010, not moved: a star far from its diamond has moved in 15 years. Orange squares: SIMBAD objects. White crosses: where we measured the target on each date up to this frame; the line joining them is its path. Hover or tap for details. A moving dot that matches none of them is worth a closer look.</p>
+    </div>
+
+    <div class="side">
+      <h2 data-i18n="this_epoch">This epoch</h2>
+      <dl class="kv" id="info"><dt>Status</dt><dd>Nothing loaded yet.</dd></dl>
+      <p class="note" id="legendnote" hidden><span class="legend"></span><span data-i18n="legend_note">Yellow ring: where the catalogue proper motion predicts the target on this date.</span></p>
+      <div id="msgs"></div>
+      <div class="share">
+        <input id="shareurl" readonly aria-label="Shareable link">
+        <button class="btn small" id="copy" type="button" data-i18n="copy">Copy link</button>
+      </div>
+      <div style="margin-top:10px"><button class="btn small" id="csv" type="button" hidden data-i18n="csv_epoch">Download epoch table (CSV)</button></div>
+    </div>
+  </section>
+
+  <section class="card" id="motioncard" hidden aria-label="Is the target moving?">
+    <h2 data-i18n="mv_h">Is it moving? Measured from the SPHEREx images alone</h2>
+    <div class="mvhead"><span class="verdict" id="mvverdict"></span><p class="mvsum" id="mvsum"></p></div>
+    <div class="mvgrid">
+      <figure><canvas id="chM" role="img" aria-label="Motion on the sky in arcsec per year: measured arrow and catalogue arrow"></canvas>
+        <figcaption data-i18n="mv_fig">Motion on the sky in arcsec per year (north up, east left). Lime arrow with error bars: what the SPHEREx images show. Dashed blue arrow: the catalogue proper motion. Rings are 1, 2, 5… arcsec per year.</figcaption></figure>
+      <div><dl class="kv" id="mvkv"></dl><p class="note" id="mvnote"></p></div>
+    </div>
+  </section>
+
+  <section class="card" id="meascard" hidden aria-label="Measurements">
+    <h2 data-i18n="meas_h">What we measured at the target position</h2>
+    <p class="note" id="meastext" style="margin-top:0"></p>
+    <div class="charts">
+      <figure><canvas id="chA" role="img" aria-label="Offset of the measured position from the catalogue prediction, by date"></canvas>
+        <figcaption data-i18n="fig_pos">Position: how far the measured centre is from where the catalogue predicts it (arcsec). Shown where the position can be measured: signal-to-noise at least 5, or the centre of a saturated core for very bright stars.</figcaption></figure>
+      <figure><canvas id="chB" role="img" aria-label="Measured brightness by date"></canvas>
+        <figcaption data-i18n="fig_flux">Brightness: flux in a 2-pixel-radius aperture (mJy, background removed) with its noise. If any epoch is saturated (the star centre is lost), every epoch uses a proxy from the PSF wings instead (hollow points: trend only, not calibrated).</figcaption></figure>
+    </div>
+    <div class="tablewrap"><table><thead><tr><th data-i18n="th_epoch">Epoch</th><th data-i18n="th_snr">Signal/noise</th><th data-i18n="th_flux">Flux (mJy)</th><th data-i18n="th_off">Offset E / N (arcsec)</th><th data-i18n="th_note">Note</th></tr></thead><tbody id="measbody"></tbody></table></div>
+    <div style="margin-top:10px"><button class="btn small" id="csv2" type="button" data-i18n="csv_meas">Download measurements (CSV)</button></div>
+  </section>
+
+  <section class="card" id="speccard" hidden aria-label="Spectrum">
+    <h2 data-i18n="spec_h">Spectrum from the SPHEREx images</h2>
+    <p class="note" id="spectext" style="margin-top:0"></p>
+    <div class="charts"><figure style="grid-column:1/-1"><canvas id="chS" style="height:300px" role="img" aria-label="Brightness of the target against wavelength"></canvas>
+      <figcaption data-i18n="fig_spec">Each SPHEREx image sees the target at its own wavelength, so one measurement per image, plotted against wavelength, is a spectrum. Hollow circles: saturated image (not reliable). Grey vertical lines separate the six detectors.</figcaption></figure></div>
+    <div style="margin-top:10px"><button class="btn small" id="csv3" type="button" data-i18n="csv_spec">Download spectrum (CSV)</button></div>
+  </section>
+
+  <section class="card" id="sourcescard" hidden>
+    <details>
+      <summary><strong data-i18n="src_title">NASA data used</strong> <span id="srccount" style="color:var(--muted)"></span></summary>
+      <p class="note" id="srctext"></p>
+      <div class="tablewrap"><table><thead><tr><th data-i18n="th_epoch">Epoch</th><th data-i18n="th_obs">Observation ID</th><th data-i18n="th_coll">Collection</th><th data-i18n="th_utc">Date (UTC)</th><th data-i18n="th_wl">Wavelength</th><th data-i18n="th_full">Full image (IRSA)</th></tr></thead><tbody id="srcbody"></tbody></table></div>
+    </details>
+  </section>
+
+  <section class="card limits" aria-label="Limitations">
+    <h2 data-i18n="lim_h">Limitations (please read)</h2>
+    <ul id="limits">
+      <li data-i18n="lim1">SPHEREx has only about one year of public data so far: slow objects move less than 2 pixels.</li>
+      <li data-i18n="lim2">Pixels are 6.2 arcsec; parallax (&lt; 0.6 arcsec) is far too small to see.</li>
+      <li data-i18n="lim3">Very bright stars can saturate; saturated pixels are counted and their brightness is not reliable.</li>
+      <li data-i18n="lim4">SPHEREx wavelength changes across each detector, so brightness between epochs is only approximate.</li>
+      <li data-i18n="lim5">This is an exploration tool: a moving dot is a candidate to check, not a discovery.</li>
+      <li data-i18n="lim6">A new position (your own coordinates) is computed live and needs the NASA IRSA archive to be online. The five example targets are pre-computed and open even when IRSA is down.</li>
+    </ul>
+  </section>
+
+  <section class="card" id="about">
+    <h2 data-i18n="about_h">How to read it</h2>
+    <p class="note" style="margin-top:0" data-i18n="about_flip"><strong>Flipbook:</strong> each frame is the median of a few SPHEREx images taken within days of each other (same detector), aligned on the sky. Stars stay put; anything that moves jumps between frames.</p>
+    <p class="note" data-i18n="about_diff"><strong>Difference:</strong> each epoch minus the first. Grey = no change, white = brighter now, black = fainter now. A moving star shows as a white and black pair.</p>
+    <p class="note" data-i18n="about_link"><strong>Link:</strong> every view has a URL such as <code>?ra=269.45&amp;dec=4.69&amp;pmra=-801.6&amp;pmdec=10362&amp;fov=0.1</code> that you can share or embed.</p>
+  </section>
+
+  <section class="card glossary" id="learn">
+    <details>
+      <summary><strong data-i18n="gl_h">Learn more: the ideas behind it</strong></summary>
+      <dl class="gl">
+        <dt data-i18n="gl1_t">What is SPHEREx?</dt>
+        <dd data-i18n="gl1_d">A NASA space telescope launched in 2025. It scans the whole sky in 102 infrared &ldquo;colours&rdquo; from 0.75 to 5 micron, and repeats the survey several times.</dd>
+        <dt data-i18n="gl2_t">Why does every image have its own wavelength?</dt>
+        <dd data-i18n="gl2_d">Each detector sits behind a filter whose colour changes smoothly across it (a linear variable filter). In each exposure the star lands on a different part of the filter, so each image sees it at a different wavelength. Putting many images together gives a spectrum. This is also why the same star can look brighter in one image than in another without being variable.</dd>
+        <dt data-i18n="gl3_t">Proper motion</dt>
+        <dd data-i18n="gl3_d">Stars drift slowly across the sky. Barnard's Star moves 10.4 arcsec per year, the most of any star, which is about 1.7 SPHEREx pixels per year.</dd>
+        <dt data-i18n="gl4_t">Brown dwarfs</dt>
+        <dd data-i18n="gl4_d">Objects between a planet and a star, too light to burn hydrogen. Epsilon Indi B is a T-type brown dwarf; WISE 0855 is only about 250 K (about &minus;23 &deg;C), so it shines almost only in the infrared, beyond 4 micron.</dd>
+        <dt data-i18n="gl5_t">Variable stars</dt>
+        <dd data-i18n="gl5_d">RW Aurigae is a young star that dims irregularly; R Draconis is a Mira variable that swells and shrinks over about 245 days.</dd>
+        <dt data-i18n="gl6_t">Saturation</dt>
+        <dd data-i18n="gl6_d">A very bright star fills pixels beyond what the detector can count, so its centre is lost. We still use its position but not its brightness.</dd>
+        <dt data-i18n="gl7_t">Signal-to-noise (S/N) and mJy</dt>
+        <dd data-i18n="gl7_d">S/N of 5 or more means the signal is at least five times the usual noise: normally a real detection. 1 mJy (millijansky) is a unit for the brightness of a source.</dd>
+      </dl>
+    </details>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p id="foot-pre"></p>
+  <p data-i18n="foot2">Data: NASA/IPAC Infrared Science Archive (IRSA), SPHEREx Data Release 1 and Quick Release 3. Proper motions: CDS SIMBAD / Gaia DR3.</p>
+  <p data-i18n="foot3">Built for NASA Space Apps Challenge 2026 (Hanoi) by Team AEC. Not affiliated with or endorsed by NASA. Open source, Apache-2.0.</p>
+</footer>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
