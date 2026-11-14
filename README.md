@@ -125,9 +125,12 @@ or `GET /api/frames?target=barnard|epsindib|wise0855|rwaur|rdra`. Returns JSON: 
 
 The page opens in English. The **EN / VI** switch in the header shows the whole interface, the measurement texts and a short glossary in Vietnamese; the choice is remembered in the browser and added to shared links as `?lang=vi`. Strings live in `public/i18n.js` (English text stays in `index.html`).
 
-## AI use
+## Two AI tools were used:
 
-The code, documentation and tests were written with the help of Claude (Anthropic) through Claude Code. The team directed the work and checked the results against real SPHEREx data (see the targets above). No simulated data is used anywhere in the app.
+- **Claude (Anthropic), through Claude Code:** helped write the code (Flask backend, image pipeline, measurements, catalogue queries, JavaScript front end), the documentation, the slides and the submission text.
+- **ChatGPT (OpenAI):** helped analyse the challenge brief and compare our work against it, to find what we had missed.
+
+The team directed the work and checked every result against real SPHEREx data (see the targets above); claims the data did not support were removed. No AI-generated images, video or audio are used, and no simulated data is used anywhere in the app.
 
 ## Credits and references
 
