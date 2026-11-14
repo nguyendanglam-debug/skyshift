@@ -1,0 +1,7 @@
+out/
+backup/
+__pycache__/
+*.pyc
+.claude/
+scripts/
+dev_server.py

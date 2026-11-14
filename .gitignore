@@ -1,0 +1,8 @@
+out/
+backup/
+__pycache__/
+*.pyc
+.claude/
+.vercel/
+
+.vercel
